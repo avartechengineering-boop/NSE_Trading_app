@@ -3,52 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NSE Live-Sheet Bridge</title>
+    <title>NSE Live-Pro</title>
     
-    <!-- PWA Metadata -->
+    <!-- PWA Meta Tags for Standalone Mode -->
     <meta name="theme-color" content="#050608">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2422/2422796.png">
+    <meta name="apple-mobile-web-app-title" content="NSE Live">
     
-    <!-- Web App Manifest (Inline) -->
-    <link rel="manifest" href='data:application/json,{"name":"NSE Pro Bridge","short_name":"NSE Bridge","start_url":".","display":"standalone","background_color":"#050608","theme_color":"#050608","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2422/2422796.png","sizes":"512x512","type":"image/png"}]}'>
+    <!-- Icon & Manifest -->
+    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/gg-dl/AOI_d_8tcKBi9EugyygTTtVNlppsgCjwYLy5hs3QDSoxAbUZvk0_gYF-YlU21aEnGztimhnGaXx8MJN79xtIL7j54qZ05DdtAaCQUO8MSfBBzLjG6h1j_q88bOU8cFg4-cf_7aDwhFk1lLGY5B9X0bX3x48Z3K3mM4D7FQSAjn6LkqUwbzr5=s1024-rj">
+    <link rel="manifest" href='data:application/json,{"name":"NSE Pro Bridge","short_name":"NSE Bridge","start_url":"index.html","display":"standalone","background_color":"#050608","theme_color":"#050608","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2422/2422796.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050608; -webkit-tap-highlight-color: transparent; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #050608;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .font-mono {
-            font-family: 'JetBrains Mono', monospace;
-        }
-        /* PWA standalone tweaks */
+        /* Hide scrollbar but keep functionality */
+        ::-webkit-scrollbar { display: none; }
+        
+        /* Fullscreen UI Tweaks */
         @media (display-mode: standalone) {
-            body {
-                padding-top: env(safe-area-inset-top);
-            }
+            body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
         }
     </style>
 </head>
 <body class="text-slate-200 min-h-screen p-4 md:p-8">
     <div class="max-w-4xl mx-auto">
         
-        <!-- Connection Status Header -->
+        <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-800 pb-8">
             <div>
                 <h1 class="text-2xl font-black text-white flex items-center gap-2 tracking-tighter italic uppercase">
                     NSE <span class="text-blue-500">Live-Pro</span>
                 </h1>
-                <div id="status-container" class="mt-2 flex items-center gap-3">
-                    <!-- Status injected by JS -->
-                </div>
+                <div id="status-container" class="mt-2 flex items-center gap-3"></div>
             </div>
-
             <div class="flex gap-2">
                 <button id="refresh-btn" class="p-3 bg-slate-800 rounded-2xl hover:bg-slate-700 transition-all active:scale-90">
                     <i data-lucide="refresh-cw" id="refresh-icon" class="w-5 h-5 text-blue-400"></i>
@@ -56,213 +50,151 @@
             </div>
         </div>
 
-        <!-- Error Container -->
-        <div id="error-container" class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-sm">
-            <i data-lucide="alert-circle" class="w-[18px] h-[18px]"></i>
-            <span id="error-message"></span>
-        </div>
-
-        <!-- Dynamic List -->
-        <div id="data-list" class="grid grid-cols-1 gap-4">
-            <!-- Data rows injected by JS -->
-        </div>
-
-        <!-- Install Prompt (PWA Only) -->
-        <div id="install-banner" class="hidden mt-8 p-6 bg-indigo-600 rounded-3xl flex justify-between items-center shadow-lg shadow-indigo-500/20">
-            <div>
-                <h4 class="text-white font-black text-sm uppercase">Install App</h4>
-                <p class="text-indigo-100 text-[10px] font-bold">Add to your home screen for one-tap access</p>
+        <!-- Connection Error UI -->
+        <div id="error-container" class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex flex-col gap-1 text-red-500 text-sm">
+            <div class="flex items-center gap-3 font-bold">
+                <i data-lucide="alert-circle" class="w-[18px] h-[18px]"></i>
+                <span id="error-message">Sync Failed</span>
             </div>
-            <button id="install-btn" class="bg-white text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Install</button>
         </div>
 
-        <!-- Footer Guidance -->
+        <!-- Main Data Container -->
+        <div id="data-list" class="grid grid-cols-1 gap-4"></div>
+
+        <!-- Troubleshooting Info -->
         <div class="mt-12 p-8 bg-blue-600/5 border border-blue-600/10 rounded-[2rem]">
             <h4 class="flex items-center gap-2 text-blue-400 font-black text-sm uppercase tracking-tighter mb-4">
-                <i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]"></i> Live Setup Status
+                <i data-lucide="help-circle" class="w-[18px] h-[18px]"></i> App Configuration
             </h4>
-            <p class="text-xs text-slate-400 leading-relaxed max-w-2xl">
-                Terminal synced to Google Sheets. Current logic: <br/><br/>
-                <span class="text-green-500 font-bold">Bullish:</span> Price Change ≥ 0 (Green) <br/>
-                <span class="text-red-500 font-bold">Bearish:</span> Price Change < 0 (Red)
-            </p>
+            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-loose">
+                Sync Status: <span id="sync-type" class="text-slate-300">Initializing...</span><br>
+                Mode: <span id="display-mode" class="text-slate-300">Browser</span>
+            </div>
         </div>
     </div>
 
     <script>
-        const REAL_DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAsFYmyTcwhdZCZpkj_C8b8_AdmB-tAgH8ws-G3RQ-QebSuGUmR7I5HOViNsUeMsEB4U2xu59wFQEO/pub?gid=0&single=true&output=csv";
+        // 1. YOUR GOOGLE SHEET LINK
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAsFYmyTcwhdZCZpkj_C8b8_AdmB-tAgH8ws-G3RQ-QebSuGUmR7I5HOViNsUeMsEB4U2xu59wFQEO/pub?gid=0&single=true&output=csv";
+        
+        // 2. INTERNAL LOGIC
+        function getCleanUrl(url) {
+            if (!url) return "";
+            let clean = url.trim();
+            if (clean.includes("/pubhtml")) clean = clean.replace("/pubhtml", "/pub?output=csv");
+            return `https://corsproxy.io/?${encodeURIComponent(clean)}`;
+        }
 
+        const REAL_DATA_URL = getCleanUrl(SHEET_URL);
         let isSimulation = true;
         let isLoading = false;
-        let deferredPrompt;
 
         const updateMarket = async () => {
             if (isLoading) return;
             setLoadingState(true);
-            hideError();
-
-            if (!REAL_DATA_URL || REAL_DATA_URL.trim() === "") {
-                isSimulation = true;
-                const mockSymbols = ['NIFTY 50', 'BANK NIFTY', 'RELIANCE', 'HDFCBANK', 'TCS', 'INFY'];
-                const mockData = mockSymbols.map(s => {
-                    const chg = (Math.random() * 2 - 1).toFixed(2);
-                    return {
-                        symbol: s,
-                        ltp: (Math.random() * 20000 + 500).toFixed(2),
-                        chg: chg,
-                        status: parseFloat(chg) >= 0 ? "Bullish" : "Bearish"
-                    };
-                });
-                renderData(mockData);
-                renderStatus();
-                setLoadingState(false);
-                return;
-            }
-
             try {
                 const res = await fetch(REAL_DATA_URL);
-                if (!res.ok) throw new Error("Sheet not accessible. Check settings.");
-                
                 const text = await res.text();
-                const rows = text.split('\n').map(row => row.split(','));
                 
-                const parsedData = rows.slice(1).map(cols => {
-                    const price = parseFloat(cols[1]);
-                    const change = parseFloat(cols[2]);
-                    const isPositive = change >= 0;
-                    return {
-                        symbol: (cols[0] || "Unknown").trim(),
-                        ltp: isNaN(price) ? "0.00" : price.toLocaleString('en-IN'),
-                        chg: isNaN(change) ? "0.00" : change.toFixed(2),
-                        status: isPositive ? "Bullish" : "Bearish",
-                        isPositive
-                    };
-                }).filter(item => item.symbol && item.symbol !== "Unknown");
+                if (text.includes("<!DOCTYPE html")) throw new Error("Link is a Website, not CSV");
 
-                if (parsedData.length === 0) throw new Error("No data found.");
+                const rows = text.split(/\r?\n/).map(row => row.split(',').map(c => c.replace(/"/g, '').trim()));
+                const parsedData = rows.slice(1).map(cols => {
+                    if (cols.length < 2 || !cols[0]) return null;
+                    const price = parseFloat(cols[1]?.replace(/,/g, '') || 0);
+                    const change = parseFloat(cols[2]?.replace(/%/g, '') || 0);
+                    return {
+                        symbol: cols[0],
+                        ltp: price.toLocaleString('en-IN'),
+                        chg: change.toFixed(2),
+                        isUp: change >= 0
+                    };
+                }).filter(i => i !== null);
+
+                if (parsedData.length === 0) throw new Error("No data rows");
 
                 isSimulation = false;
                 renderData(parsedData);
-                renderStatus();
             } catch (e) {
-                showError(e.message);
-                isSimulation = true;
-                renderStatus();
+                console.warn("Using Simulation:", e.message);
+                runSimulation();
             } finally {
                 setLoadingState(false);
+                renderStatus();
             }
         };
 
-        const renderStatus = () => {
-            const container = document.getElementById('status-container');
-            if (isSimulation) {
-                container.innerHTML = `
-                    <div class="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                        <i data-lucide="lock" class="w-3 h-3 text-amber-500"></i>
-                        <span class="text-[10px] font-black text-amber-500 uppercase tracking-widest">Sim Mode</span>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                        <i data-lucide="zap" class="w-3 h-3 text-blue-500"></i>
-                        <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Live Syncing</span>
-                    </div>
-                `;
-            }
-            lucide.createIcons();
+        const runSimulation = () => {
+            isSimulation = true;
+            renderData([
+                {symbol: 'NIFTY 50', ltp: '22,450.10', chg: '0.45', isUp: true},
+                {symbol: 'BANK NIFTY', ltp: '47,200.50', chg: '-0.12', isUp: false}
+            ]);
         };
 
         const renderData = (data) => {
             const list = document.getElementById('data-list');
-            list.innerHTML = data.map(item => {
-                const isBullish = parseFloat(item.chg) >= 0;
-                const accentClass = isBullish ? 'text-green-500' : 'text-red-500';
-                const badgeClass = isBullish 
-                    ? 'bg-green-500/10 text-green-500 border-green-500/30' 
-                    : 'bg-red-500/10 text-red-500 border-red-500/30';
-
-                return `
-                    <div class="bg-[#0f1115] border border-slate-800 p-6 rounded-3xl flex items-center justify-between active:bg-slate-800 transition-all shadow-xl">
-                        <div class="flex items-center gap-5">
-                            <div class="h-12 w-12 bg-slate-900 rounded-2xl flex items-center justify-center font-black border border-slate-700 ${accentClass}">
-                                ${item.symbol[0]}
-                            </div>
-                            <div>
-                                <h3 class="text-white font-black text-base tracking-tight uppercase">${item.symbol}</h3>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tick</p>
-                            </div>
+            list.innerHTML = data.map(item => `
+                <div class="bg-[#0f1115] border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl">
+                    <div class="flex items-center gap-4">
+                        <div class="h-10 w-10 bg-slate-900 rounded-xl flex items-center justify-center font-black border border-slate-700 ${item.isUp ? 'text-green-500' : 'text-red-500'}">
+                            ${item.symbol[0]}
                         </div>
-
-                        <div class="text-center">
-                            <div class="text-lg font-mono font-bold text-white tracking-tighter">₹${item.ltp}</div>
-                            <div class="text-xs font-black ${accentClass}">
-                                ${isBullish ? '▲' : '▼'} ${item.chg}%
-                            </div>
-                        </div>
-
-                        <div class="text-right hidden sm:block">
-                            <div class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${badgeClass}">
-                                ${isBullish ? 'Bullish' : 'Bearish'}
-                            </div>
+                        <div>
+                            <h3 class="text-white font-bold text-sm uppercase">${item.symbol}</h3>
+                            <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Live Tick</p>
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <div class="text-right">
+                        <div class="text-base font-mono font-bold text-white">₹${item.ltp}</div>
+                        <div class="text-[11px] font-black ${item.isUp ? 'text-green-500' : 'text-red-500'}">
+                            ${item.isUp ? '+' : ''}${item.chg}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         };
 
-        const setLoadingState = (loading) => {
-            isLoading = loading;
-            const icon = document.getElementById('refresh-icon');
-            if (loading) icon.classList.add('animate-spin');
-            else icon.classList.remove('animate-spin');
-        };
+        const renderStatus = () => {
+            const container = document.getElementById('status-container');
+            const syncLabel = document.getElementById('sync-type');
+            const displayMode = document.getElementById('display-mode');
+            
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            displayMode.textContent = isStandalone ? "App Mode (PWA)" : "Browser Tab";
 
-        const showError = (msg) => {
-            const container = document.getElementById('error-container');
-            document.getElementById('error-message').textContent = msg;
-            container.classList.remove('hidden');
-        };
-
-        const hideError = () => document.getElementById('error-container').classList.add('hidden');
-
-        // PWA Install Logic
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('install-banner').classList.remove('hidden');
-        });
-
-        document.getElementById('install-btn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('install-banner').classList.add('hidden');
-                }
-                deferredPrompt = null;
+            if (isSimulation) {
+                container.innerHTML = `<div class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 text-[10px] font-black uppercase">Offline</div>`;
+                syncLabel.textContent = "Simulation (Check CSV Link)";
+            } else {
+                container.innerHTML = `<div class="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-500 text-[10px] font-black uppercase tracking-widest">Live</div>`;
+                syncLabel.textContent = "Google Sheets Active";
             }
-        });
+            lucide.createIcons();
+        };
 
-        // Service Worker (Inline)
+        const setLoadingState = (l) => {
+            isLoading = l;
+            document.getElementById('refresh-icon').classList.toggle('animate-spin', l);
+        };
+
+        // 3. CRITICAL SERVICE WORKER FOR "REAL APP" BEHAVIOR
         if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('fetch', function(event) {
-                    event.respondWith(fetch(event.request));
-                });
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl).catch(console.error);
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'nse-v1';
+                    self.addEventListener('install', (e) => self.skipWaiting());
+                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+                `;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                navigator.serviceWorker.register(URL.createObjectURL(blob))
+                    .then(() => console.log("PWA Ready"))
+                    .catch(err => console.error("PWA Failed", err));
+            });
         }
 
         document.getElementById('refresh-btn').addEventListener('click', updateMarket);
-
-        window.onload = () => {
-            lucide.createIcons();
-            updateMarket();
-            setInterval(updateMarket, 10000);
-        };
+        window.onload = () => { updateMarket(); setInterval(updateMarket, 30000); };
     </script>
 </body>
 </html>
